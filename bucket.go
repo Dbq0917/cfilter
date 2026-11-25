@@ -2,13 +2,23 @@ package cfilter
 
 import "math/rand"
 
-type bucket []fingerprint
+type entry struct {
+	fp     fingerprint
+	home   uint
+	bucket uint
+	slot   int
+	prev   *entry
+	next   *entry
+}
 
-func (b bucket) insert(f fingerprint) bool {
+type bucket []*entry
 
-	for i, fp := range b {
-		if fp == nil {
-			b[i] = f
+func (b bucket) insert(e *entry, bucketIndex uint) bool {
+	for i, current := range b {
+		if current == nil {
+			b[i] = e
+			e.bucket = bucketIndex
+			e.slot = i
 			return true
 		}
 	}
@@ -17,8 +27,8 @@ func (b bucket) insert(f fingerprint) bool {
 }
 
 func (b bucket) lookup(f fingerprint) bool {
-	for _, fp := range b {
-		if match(fp, f) {
+	for _, e := range b {
+		if e != nil && match(e.fp, f) {
 			return true
 		}
 	}
@@ -26,20 +36,28 @@ func (b bucket) lookup(f fingerprint) bool {
 	return false
 }
 
-func (b bucket) remove(f fingerprint) bool {
-	for i, fp := range b {
-		if match(fp, f) {
+func (b bucket) remove(f fingerprint) *entry {
+	for i, e := range b {
+		if e != nil && match(e.fp, f) {
 			b[i] = nil
-			return true
+			return e
 		}
 	}
 
-	return false
+	return nil
 }
 
-func (b bucket) swap(f fingerprint) fingerprint {
+func (b bucket) swap(e *entry, bucketIndex uint) *entry {
 	i := rand.Intn(len(b))
-	b[i], f = f, b[i]
+	victim := b[i]
 
-	return f
+	b[i] = e
+	e.bucket = bucketIndex
+	e.slot = i
+
+	if victim != nil {
+		victim.slot = -1
+	}
+
+	return victim
 }
