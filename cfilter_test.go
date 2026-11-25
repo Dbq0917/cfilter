@@ -14,8 +14,9 @@ func TestMultipleInsertions(t *testing.T) {
 
 	fd, err := os.Open("/usr/share/dict/words")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Skipf("skipping dictionary-backed test: %v", err)
 	}
+	defer fd.Close()
 
 	scanner := bufio.NewScanner(fd)
 	var words [][]byte

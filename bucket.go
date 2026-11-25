@@ -43,3 +43,10 @@ func (b bucket) swap(f fingerprint) fingerprint {
 
 	return f
 }
+
+func (b bucket) swapTracked(f fingerprint) (fingerprint, int) {
+	i := rand.Intn(len(b))
+	b[i], f = f, b[i]
+
+	return f, i
+}
