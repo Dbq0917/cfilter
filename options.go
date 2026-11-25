@@ -42,12 +42,18 @@ func MaximumKicks(k uint) option {
 func HashFn(hashfn hash.Hash) option {
 	return func(cf *CFilter) {
 		cf.hashfn = hashfn
+		// A user-supplied hash.Hash is a single mutable instance, so serialize
+		// its entire reset/write/sum cycle. Default construction uses a fresh
+		// instance per call and needs no extra locking.
+		cf.sharedHash = true
+		cf.newHash = func() hash.Hash { return hashfn }
 	}
 }
 
 func configure(cf *CFilter) {
 	if cf.hashfn == nil {
 		cf.hashfn = fnv.New64()
+		cf.newHash = func() hash.Hash { return fnv.New64() }
 	}
 	if cf.bSize == 0 {
 		cf.bSize = 4
@@ -61,4 +67,20 @@ func configure(cf *CFilter) {
 	if cf.size == 0 {
 		cf.size = (1 << 18) / uint(cf.bSize)
 	}
+	// Partial-key cuckoo hashing relies on the two candidate-bucket mapping
+	// being an involution, which only holds when the bucket count is a power
+	// of two. Round any requested size up to the next power of two.
+	cf.size = nextPowerOfTwo(cf.size)
+}
+
+// nextPowerOfTwo returns the smallest power of two that is >= n.
+func nextPowerOfTwo(n uint) uint {
+	if n < 2 {
+		return 2
+	}
+	p := uint(1)
+	for p < n {
+		p <<= 1
+	}
+	return p
 }

@@ -1,14 +1,20 @@
 package cfilter
 
-import "math/rand"
+// entry pairs a fingerprint with the full 64-bit hash of the originating
+// item. The full hash is what lets the filter relocate entries deterministically
+// when the table doubles: partial-key cuckoo hashing alone cannot recover the
+// high bits of the bucket index from a fingerprint.
+type entry struct {
+	fp   fingerprint
+	home uint64
+}
 
-type bucket []fingerprint
+type bucket []entry
 
-func (b bucket) insert(f fingerprint) bool {
-
-	for i, fp := range b {
-		if fp == nil {
-			b[i] = f
+func (b bucket) insert(e entry) bool {
+	for i := range b {
+		if b[i].fp == nil {
+			b[i] = e
 			return true
 		}
 	}
@@ -17,8 +23,8 @@ func (b bucket) insert(f fingerprint) bool {
 }
 
 func (b bucket) lookup(f fingerprint) bool {
-	for _, fp := range b {
-		if match(fp, f) {
+	for _, e := range b {
+		if e.fp != nil && match(e.fp, f) {
 			return true
 		}
 	}
@@ -27,19 +33,12 @@ func (b bucket) lookup(f fingerprint) bool {
 }
 
 func (b bucket) remove(f fingerprint) bool {
-	for i, fp := range b {
-		if match(fp, f) {
-			b[i] = nil
+	for i := range b {
+		if b[i].fp != nil && match(b[i].fp, f) {
+			b[i] = entry{}
 			return true
 		}
 	}
 
 	return false
-}
-
-func (b bucket) swap(f fingerprint) fingerprint {
-	i := rand.Intn(len(b))
-	b[i], f = f, b[i]
-
-	return f
 }

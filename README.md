@@ -41,6 +41,22 @@ A cuckoo filter supports following operations:
    records on external storage); otherwise, a false item may be deleted.
 *  `Count()`: return the total number of items currently in the filter
 
+## Online growth
+A fixed-size cuckoo filter rejects inserts once its buckets are saturated,
+which otherwise forces an offline rebuild (re-fingerprinting every key). This
+implementation grows itself instead:
+
+*  When an insert cannot fit, the bucket table is doubled and every stored
+   entry is rehashed into it transparently — `Insert` keeps returning `true`
+   and the caller never rebuilds or moves any data.
+*  Each entry keeps the full 64-bit hash of its item alongside its
+   fingerprint, so it can be relocated deterministically on a doubling. The
+   fingerprint itself is unchanged, therefore the false-positive rate does not
+   increase after growth.
+*  All operations are safe for concurrent use. A failed cuckoo placement is
+   rolled back before the table doubles, so no entry is ever lost and existing
+   members remain queryable throughout.
+
 ## Example Usage
 ```go
 import "github.com/irfansharif/cfilter"
