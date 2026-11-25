@@ -40,6 +40,8 @@ A cuckoo filter supports following operations:
    method, it must be ensured that this item is in the filter (e.g., based on
    records on external storage); otherwise, a false item may be deleted.
 *  `Count()`: return the total number of items currently in the filter
+*  `Capacity()`: return the total number of fingerprint slots in the filter
+*  `LoadFactor()`: return the fraction of fingerprint slots currently occupied
 
 ## Example Usage
 ```go
